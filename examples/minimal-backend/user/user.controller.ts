@@ -7,7 +7,7 @@ export class UserController {
 	constructor(private readonly userService: UserService) {}
 
 	@Decorators.Methods.Get("/")
-	getUsers(req: Request): Effect.Effect<Response, never, never> {
+	getUsers(req: Request): Effect.Effect<Response, unknown, never> {
 		return pipe(
 			Effect.succeed(this.userService.getAllUsers()),
 			Effect.map(
@@ -19,4 +19,13 @@ export class UserController {
 			),
 		);
 	}
+
+	@Decorators.Methods.Post("/")
+	createUser() {}
+
+	@Decorators.Methods.Patch("/")
+	updateUser() {}
+
+	@Decorators.Methods.Delete("/")
+	deleteUser() {}
 }

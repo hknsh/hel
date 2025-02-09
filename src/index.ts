@@ -15,7 +15,25 @@ interface RouteDefinition {
 	methodName: string;
 }
 
-type Handler = (ctx: Context) => Effect.Effect<Response, never, never>;
+type Handler = (ctx: Context) => Effect.Effect<Response, unknown, never>;
+
+function addRoute(
+	target: any,
+	propertyKey: string | symbol,
+	path: string,
+	requestMethod: string,
+): void {
+	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+	const routes: RouteDefinition[] =
+		Reflect.getMetadata(ROUTE_METADATA_KEY, target.constructor) || [];
+	routes.push({
+		path: normalizedPath,
+		requestMethod,
+		methodName: propertyKey as string,
+	});
+	Reflect.defineMetadata(ROUTE_METADATA_KEY, routes, target.constructor);
+}
 
 export const Decorators = {
 	Controller: (prefix: string): ClassDecorator => {
@@ -26,26 +44,22 @@ export const Decorators = {
 	Methods: {
 		Get: (path: string): MethodDecorator => {
 			return (target, propertyKey, descriptor): void => {
-				const routes: RouteDefinition[] =
-					Reflect.getMetadata(ROUTE_METADATA_KEY, target.constructor) || [];
-				routes.push({
-					path,
-					requestMethod: "GET",
-					methodName: propertyKey as string,
-				});
-				Reflect.defineMetadata(ROUTE_METADATA_KEY, routes, target.constructor);
+				addRoute(target, propertyKey, path, "GET");
 			};
 		},
 		Post: (path: string): MethodDecorator => {
 			return (target, propertyKey, descriptor): void => {
-				const routes: RouteDefinition[] =
-					Reflect.getMetadata(ROUTE_METADATA_KEY, target.constructor) || [];
-				routes.push({
-					path,
-					requestMethod: "POST",
-					methodName: propertyKey as string,
-				});
-				Reflect.defineMetadata(ROUTE_METADATA_KEY, routes, target.constructor);
+				addRoute(target, propertyKey, path, "POST");
+			};
+		},
+		Patch: (path: string): MethodDecorator => {
+			return (target, propertyKey, descriptor): void => {
+				addRoute(target, propertyKey, path, "PATCH");
+			};
+		},
+		Delete: (path: string): MethodDecorator => {
+			return (target, propertyKey, descriptor): void => {
+				addRoute(target, propertyKey, path, "DELETE");
 			};
 		},
 	},
@@ -70,9 +84,7 @@ class HelApplication {
 				controller.constructor,
 			);
 
-			console.log(
-				`[Core] Found controller [${controller.constructor.name}] for prefix [${controllerMeta.prefix}/]`,
-			);
+			console.log(`[Hel] Found controller: [${controller.constructor.name}]`);
 
 			if (!controllerMeta) {
 				console.warn(
@@ -84,6 +96,9 @@ class HelApplication {
 
 			for (const route of routes) {
 				const fullPath = `${controllerMeta.prefix}${route.path}`;
+				console.log(
+					`[Hel] Route in [${controller.constructor.name}]: Endpoint: [${route.requestMethod}] [${route.path}] | [${route.methodName}]`,
+				);
 				this.Route(route.requestMethod, fullPath, (ctx) => {
 					return (controller as any)[route.methodName](ctx.request);
 				});
@@ -122,11 +137,11 @@ class HelApplication {
 				});
 			},
 		} as unknown as TLSWebSocketServeOptions<unknown>);
-		console.log("[Core] Using Hel in version 0.0.1");
+		console.log("[Hel] Using version [0.0.1]");
 		if (callback) {
 			callback();
 		} else {
-			console.log(`[Core] Server running on port: ${port}`);
+			console.log(`[Hel] Server running on port: ${port}`);
 		}
 	}
 }
